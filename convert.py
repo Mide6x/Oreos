@@ -3,13 +3,24 @@ import pandas as pd
 import re
 import base64
 import io
-import torch
-from transformers import AlbertTokenizer, AlbertForSequenceClassification
 import json
 
+category_data = {
+    "Beverages & Milk": ["Cocoa Beverages", "Everyday Tea", "Coffee", "Herbal Teas", "Milk"],
+    "Breakfast & Cereals": ["Oats & Instant Cereals", "Sugar, Honey & Sweeteners", "Butter, Cheese & Other Spreads"],
+    "Cooking Paste, Oil & Spices": ["Tomato Paste", "Cooking Oils", "Salt & Seasoning Cubes", "Herbs & Spices"],
+    "Foodstuff": ["Grains & Rice", "Pasta & Noodles", "Poundo, Wheat & Semolina", "Canned Foods"],
+    "Snacks & Confectioneries": ["Biscuits, Chin Chin & Cookies", "Nuts & Seeds", "Chocolates & Sweets", "Dry Fruits"],
+    "Baking Ingredients": ["Flour & Baking Powder", "Baking Tools & Accessories"],
+    "Alcoholic Drinks": ["Beer", "Liquers & Creams", "Cognac & Spirits", "Wines & Champagne"],
+    "Non-Alcoholic Drinks": ["Fizzy Drinks & Malt", "Energy Drinks", "Wines", "Fruit Juices & Yoghurt", "Water"],
+    "Baby & Kids": ["Diapering", "Baby & Toddler Health", "Daily Care", "Feeding & Nursing", "Toys & Gears", "School Bag"],
+    "Detergent & Laundry Supplies": ["Bar Soaps & Detergents", "Bathroom & Toilet Cleaners", "Fabric Softeners", "Dish Washers", "Glass Cleaner", "Disinfectant & Sprays"],
+    "Home Care & Household Supplies": ["Paper Towels & Serviettes", "Foil Paper & Cling Film", "Pests & Insect Control", "Lighters and Match Box", "Air Fresheners"],
+    "Beauty & Personal Care": ["Skin Care", "Oral Care", "Hair Care", "Fragrances", "Feminine Care", "Men's Grooming", "Make-up", "Male Shoe", "Female Shoe"]
+}
 
 def convert_variant_format(variant):
-    # Convert the input to a string to handle float inputs
     variant = str(variant)
     
     # Normalize input by replacing '×' with 'x', 'ltr' with 'L', and removing spaces around 'x'
@@ -36,8 +47,8 @@ def convert_variant_format(variant):
         count, size, unit = match3.groups()
         return f"{size.upper()}{unit.upper()} x {count}"
     
-    # If no patterns match, return the original variant
     return variant
+
 def extract_size(weight_str):
     try:
         # Use regular expression to match a number followed by "kg", "G", or "ml"
@@ -72,35 +83,17 @@ def extract_amount(weight_str):
     except:
         return None
 
-
+def categorize_product(product_name):
+    tokens = product_name.lower().split()
+    for category, product_types in category_data.items():
+        for product_type in product_types:
+            for token in tokens:
+                if token in product_type.lower():
+                    return product_type
+    return None
 
 def clean_data(df):
-    # Load the fine-tuned ALBERT model
-    model_path = './production'  # Adjust this path based on your saved model location
-    # Define label_map based on your specific subcategory labels
-    # Load label_map from JSON file
-    with open('./config.json', 'r') as f:
-        label_map = json.load(f)
-
-    model = AlbertForSequenceClassification.from_pretrained(model_path)
-    tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
-    
-    def predict_subcategory(product_name):
-        inputs = tokenizer(product_name, return_tensors="pt")
-        outputs = model(**inputs)
-        predicted_label_idx = outputs.logits.argmax().item()
-    
-        # Get the predicted label from label_map using id2label
-        predicted_label_id = label_map['id2label'][str(predicted_label_idx)]
-        predicted_category_name = label_map['label2id'][predicted_label_id]  # Assuming 'label2category' maps label IDs to category names
-    
-        return predicted_category_name
-    
-
-
-
-    # Clean the data
-    df['Product Category'] = df['Product Name'].apply(predict_subcategory)
+    df['Product Category'] = df['Product Name'].apply(categorize_product)
     df['Variant'] = df['Variant'].apply(convert_variant_format)
     df['Variant Type'] = "Size"
     Size = df['Variant'].apply(extract_size)
@@ -110,25 +103,25 @@ def clean_data(df):
     return df
 
 def main():
-  st.title('Excel Data Cleaner')
+    st.title('Excel Data Cleaner')
 
-  uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx", "xls"])
+    uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx", "xls"])
 
-  if uploaded_file is not None:
-    try:
-      df = pd.read_excel(uploaded_file)
-      st.write("Original Data:")
-      st.write(df.head(12))
+    if uploaded_file is not None:
+        try:
+            df = pd.read_excel(uploaded_file)
+            st.write("Original Data:")
+            st.write(df.head(12))
 
-      cleaned_df = clean_data(df)
+            cleaned_df = clean_data(df)
 
-      st.write("Cleaned Data:")
-      st.write(cleaned_df.head(12))
+            st.write("Cleaned Data:")
+            st.write(cleaned_df.head(12))
 
-      st.markdown(get_table_download_link(cleaned_df), unsafe_allow_html=True)
+            st.markdown(get_table_download_link(cleaned_df), unsafe_allow_html=True)
 
-    except Exception as e:
-      st.error(f"Error: {e}")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
 def get_table_download_link(df):
     # Convert DataFrame to Excel file and download
