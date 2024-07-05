@@ -85,12 +85,26 @@ def extract_amount(weight_str):
 
 def categorize_product(product_name):
     tokens = product_name.lower().split()
+    for token in tokens:
+        if 'poundo' in token or 'iyan' in token:
+            return 'Poundo, Wheat & Semolina'
+        elif 'rum' in token or 'liqueur' in token:
+            return 'Liquers & Creams'
+        elif 'soda' in token or 'bicarbonate' in token:
+            return 'Baking Tools & Accessories'
+        elif 'coca-cola' in token:
+            return 'Fizzy Drinks & Malt'
+        elif 'sauce' in token:
+            return 'Cooking Oils'
+    
     for category, product_types in category_data.items():
         for product_type in product_types:
             for token in tokens:
                 if token in product_type.lower():
                     return product_type
+    
     return None
+
 
 def clean_data(df):
     df['Product Category'] = df['Product Name'].apply(categorize_product)
