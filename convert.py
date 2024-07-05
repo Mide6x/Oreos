@@ -128,7 +128,7 @@ def get_table_download_link(df):
     output = io.BytesIO()
     writer = pd.ExcelWriter(output, engine='xlsxwriter')
     df.to_excel(writer, sheet_name='cleaned_data', index=False)
-    writer.save()
+    writer.close()
     excel_file = output.getvalue()
     b64 = base64.b64encode(excel_file).decode()
     href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="cleaned_data.xlsx">Download cleaned data XLSX file</a>'
