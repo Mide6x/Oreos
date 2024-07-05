@@ -3,7 +3,6 @@ import pandas as pd
 import re
 import base64
 import io
-import json
 
 category_data = {
     "Beverages & Milk": ["Cocoa Beverages", "Everyday Tea", "Coffee", "Herbal Teas", "Milk"],
@@ -83,8 +82,10 @@ def extract_amount(weight_str):
     except:
         return None
 
-def categorize_product(product_name):
+def categorize_product(product_name, manufacturer):
     tokens = product_name.lower().split()
+    manufacturer = manufacturer.lower()
+    
     for token in tokens:
         if 'poundo' in token or 'iyan' in token:
             return 'Poundo, Wheat & Semolina'
@@ -92,10 +93,15 @@ def categorize_product(product_name):
             return 'Liquers & Creams'
         elif 'soda' in token or 'bicarbonate' in token:
             return 'Baking Tools & Accessories'
-        elif 'coca-cola' in token:
-            return 'Fizzy Drinks & Malt'
+        elif 'custard' in token:
+            return 'Oats & Instant Cereals'
         elif 'sauce' in token:
             return 'Cooking Oils'
+        
+    if 'the coca-cola company' in manufacturer:
+        return 'Fizzy Drinks & Malt'
+    elif 'mount gay barbados' in manufacturer:
+        return 'Liquers & Creams'
     
     for category, product_types in category_data.items():
         for product_type in product_types:
@@ -105,14 +111,13 @@ def categorize_product(product_name):
     
     return None
 
-
 def clean_data(df):
-    df['Product Category'] = df['Product Name'].apply(categorize_product)
+    df['Product Category'] = df.apply(lambda row: categorize_product(row['Product Name'], row['Manufacturer Name']), axis=1)
     df['Variant'] = df['Variant'].apply(convert_variant_format)
     df['Variant Type'] = "Size"
-    Size = df['Variant'].apply(extract_size)
-    Amount = df['Variant'].apply(extract_amount)
-    df['Weight'] = round(((Size * Amount) / 1000) + 1)
+    df['Weight'] = df['Variant'].apply(extract_size)
+    df['Amount'] = df['Variant'].apply(extract_amount)
+    df['Weight'] = round(((df['Weight'] * df['Amount']) / 1000) + 1)
     df['Product Name'] = df['Product Name'].str.title()
     return df
 
