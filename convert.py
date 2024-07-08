@@ -115,9 +115,9 @@ def clean_data(df):
     df['Product Category'] = df.apply(lambda row: categorize_product(row['Product Name'], row['Manufacturer Name']), axis=1)
     df['Variant'] = df['Variant'].apply(convert_variant_format)
     df['Variant Type'] = "Size"
-    df['Weight'] = df['Variant'].apply(extract_size)
-    df['Amount'] = df['Variant'].apply(extract_amount)
-    df['Weight'] = round(((df['Weight'] * df['Amount']) / 1000) + 1)
+    Weight = df['Variant'].apply(extract_size)
+    Amount = df['Variant'].apply(extract_amount)
+    df['Weight'] = round(((Weight * Amount) / 1000) + 1)
     df['Product Name'] = df['Product Name'].str.title()
     return df
 
